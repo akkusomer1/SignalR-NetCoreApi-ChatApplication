@@ -1,0 +1,254 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <!-- <script src="scripts/signalr.min.js"></script>  -->
+<script src="styles/jquery.min.js."></script> 
+<script src="styles/bootstrap.min.js"></script>
+<script src="styles/signalr.min.js"></script>
+
+<link rel="stylesheet" href="styles/bootstrap.min.css">
+
+<script>
+    $(document).ready(() => {
+
+
+      var connection= new signalR.HubConnectionBuilder().withUrl("https://localhost:7282/ChatHub").build();
+
+      console.log(connection.state)
+      connection.start();
+      console.log(connection.state)
+      $(".disabledd").attr("disabled", "disabled");
+
+
+
+
+      $("body").on("click",".users",function () { 
+         $(".users").each((index,item) => {
+              item.classList.remove("active");
+           });
+
+           $(this).addClass("active");
+        });
+
+      
+       $("#btnGirisYap").click(()=>{
+       const nickName=  $("#txtNickName").val();   
+     
+       if(nickName=="")
+       {
+         $("#clientDurumMesajlari").text("Lütfen giriş yapmak için NickName giriniz.").removeClass("alert-success").addClass("alert-danger")
+         $("#clientDurumMesajlari").fadeIn(1000)
+
+         setTimeout(() => {
+            $("#clientDurumMesajlari").fadeOut(2000)
+         }, 2000);
+        
+         return
+       }
+
+       connection.invoke("GetNickName",nickName).catch(error=>console.log(error))
+       $(".disabledd").removeAttr("disabled")
+       })
+       
+   
+
+ 
+       connection.on("clientJoined",(nickName)=>{
+
+         $("#clientDurumMesajlari").text(`${nickName} giriş yaptı.`)
+
+         $("#clientDurumMesajlari").fadeIn(1000,()=>{
+           
+            setTimeout(() => {
+
+               $("#clientDurumMesajlari").fadeOut(2000)
+
+            }, 2000);
+
+         })
+       })
+         
+    
+       connection.on("clients",clients=>{  
+         
+           //$("#_listNickName").empty()
+          $("#_listNickName").html("")
+          $.each(clients,(index,item)=>{
+            
+            const user=$(".users").first().clone();
+             
+            user.html(item.nickName)
+            user.removeClass("active") 
+            $("#_listNickName").append(user);       
+         })        
+         })
+            
+
+     connection.on("ReceiveMessage",(message,nickName)=>{
+      const _message= $(".message").clone();
+      _message.removeClass("message");     
+      _message.find("p").text(message)
+      _message.find("h5")[0].innerHTML=nickName
+      $(".messages").append(_message)
+     })
+
+
+
+   
+
+     $("#btnGonder").click(function(){
+         const clientName=   $(".users.active").first().text()
+          const message=$("#txtMessage").val()            
+          connection.invoke("SendMessageAsync",message,clientName);
+          $("#txtMessage").val("")      
+
+           const _message= $(".message").clone();
+          _message.removeClass("message");     
+          _message.find("p").text(message)
+          _message.find("h5")[1].innerHTML="Sen"
+          $(".messages").append(_message)
+      })
+
+
+
+    
+      let _groupName;
+
+      $("#btnGrubaGonder").click(()=>{
+         const message=$("#txtMessage").val() 
+      
+        connection.invoke("SendMessageToGroupAsync",_groupName,message)
+       
+      })
+
+
+        $("#btnOdaOlustur").click(()=>{
+         connection.invoke("AddGroup",$("#txtOdaAdi").val())
+         $("#txtOdaAdi").val("")      
+        })
+
+
+      
+        connection.on("Groups",groups=>{
+       
+         let options =""
+        $.each(groups,(index,item)=>{
+
+            options +=`<option selected value="${item.groupName}">${item.groupName}</option>`
+        })
+        $(".rooms").empty();
+        $(".rooms").append(options)
+     
+        })
+
+        $("#btnOdalaraGir").click(()=>{
+
+         let groupNames=[]
+         $(".rooms option:selected").map((i,e)=>{
+            groupNames.push(e.text)
+         })
+
+          console.log(groupNames)
+     
+          connection.invoke("AddClientToGroup",groupNames)
+
+        })
+
+      
+        $(".rooms").change(function(){
+           let groupName= $(this).val()
+           _groupName=groupName[0];
+           connection.invoke("GetClientToGroup",groupName[0])
+        })
+
+        $("#AllClient").click(()=>{
+         if(_groupName !=""){
+      connection.invoke("SendMessageToGroupAsync",_groupName,message)
+         }
+        })
+
+
+       }) 
+  </script>
+</head>
+<body>
+    <div class="row mt-4">
+
+        <div class="col-md-1"></div>
+        <div class="col-md-10">
+            <div class="row">
+                <!-- Sol Menü -->
+                <div class="col-md-3">
+                    <!-- Oda -->
+
+                    <input class="form-control form-control-lg disabledd" type="text" placeholder="Oda adı" id="txtOdaAdi">
+                    <button type="button" class="btn btn-info rightButton disabledd mt-3 p-2" id="btnOdaOlustur">Oda Olustur</button>
+                    <p class="h5 mt-4 p2">Odalar</p>
+                    <select size="5" style="width: 100%;" class="form-select disabledd rooms" multiple>
+                    </select>
+                    <button type="button" class="btn btn-primary rightButton disabledd mt-4" id="btnOdalaraGir">
+                        Seçili Odalara
+                        Gir
+                    </button>
+                    <!-- Oda -->
+                    <br><br><br>
+                    <button id="AllClient" class="btn btn-success mb-3">Tüm Clientlar</button>
+                    <!-- Clientlar -->
+                    <div class="list-group" id="listNickName">
+                        <a class="list-group-item list-group-item-action users active">
+                            Tümü
+                        </a>
+
+                        <div class="d-block" id="_listNickName">
+
+                        </div>
+                    </div>
+                    <!-- Clientlar -->
+                </div>
+
+
+
+
+
+                <div class="col-md-6 p-4">
+                    <div class="alert alert-success " id="clientDurumMesajlari" style="display: none;">
+                    </div>
+                    <!-- Mesajlaşma -->
+                    <textarea id="txtMessage" class="form-control" style="margin-top: 5px;" placeholder="lletilecek mesajı buraya giriniz."
+                              rows="3"></textarea>
+                    <button type="button" class="btn btn-warning mt-2" id="btnGonder">Gönder</button>
+                    <button type="button" class="btn btn-info mt-2" id="btnGrubaGonder">Gruba Gönder</button>
+
+                    <br><br><br>
+                    <div class="list-group messages p-3">
+                        <a class="list-group-item list-group-item-action message" aria-current="true">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 ch5 class="mb-1"></h5>
+                                <h5 class="mb-2"></h5>
+                            </div>
+                            <p class="mb-1 "></p>
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <!-- Mesajlasma -->
+                    </div>
+
+                    <div class="col-md-3">
+                        <input class="form-control form-control-lg" type="text" placeholder="Adınız/Nick" id="txtNickName">
+                        <button type="button" class="btn btn-success mt-2 leftButton" id="btnGirisYap">Giriş Yap</button>
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-md-1">
+            </div>
+        </div>
+    </div>
+
+
+</body>
+</html>

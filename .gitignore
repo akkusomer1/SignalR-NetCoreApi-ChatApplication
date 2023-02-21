@@ -1,0 +1,13 @@
+bin/*
+obj/*
+.vs/*
+appsettings.json
+appsettings.Development.json
+launchSettings
+.env
+/packages
+/binaries
+/logs
+/publish
+/obj
+/wwwroot/dist

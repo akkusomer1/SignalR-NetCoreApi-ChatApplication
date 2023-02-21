@@ -1,0 +1,17 @@
+bin/*
+Properties/*
+obj/*
+.vs/*
+appsettings.json
+appsettings
+appsettings.Development.json
+launchSettings
+SignalRChatServer.Api.csproj
+SignalRChatServer.Api.csproj.user
+.env
+/packages
+/binaries
+/logs
+/publish
+/obj
+/wwwroot/dist
